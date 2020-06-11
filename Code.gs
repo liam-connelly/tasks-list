@@ -29,6 +29,9 @@ function updateTasks() {
   var currDateDay = currDate.getDay();
   var currDateHour = currDate.getUTCHours() - currDate.getTimezoneOffset()/60;
   
+  // GET LOOK AHEAD DATE
+  var lookAheadDate = new Date(new Date().setDate(currDate.getDate() + 7*lookAheadWeeks));
+  
   // GET SPREADSHEET CELL REFERENCES
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var weeklySheet = ss.getSheetByName("Weekly Tasks");
@@ -184,12 +187,22 @@ function updateTasks() {
       if (taskDates[2*j] instanceof Date && taskDates[2*j+1] instanceof Date) {
         
         taskBeginDates[j] = fixYear(taskDates[2*j]);
-        taskEndDates[j] = fixYear(taskDates[2*j+1]);
+        
+        if (taskDates[2*j+1] instanceof Date) {
+          taskEndDates[j] = fixYear(taskDates[2*j+1]);
+        } else { 
+          taskEndDates[j] = lookAheadDate;
+        }
       
-      } else if (taskDates[2*j].length>0 && taskDates[2*j+1].length>0) {
-      
+      } else if (taskDates[2*j].length>0) {
+        
         taskBeginDates[j] = fixYear(new Date(taskBeginDates[2*j]));
-        taskEndDates[j] = fixYear(new Date(taskEndDates[2*j+1]));
+        
+        if (taskDates[2*j+1].length>0) {
+          taskEndDates[j] = fixYear(new Date(taskEndDates[2*j+1]));
+        } else { 
+          taskEndDates[j] = lookAheadDate;
+        }
         
       } else break;
       
