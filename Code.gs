@@ -52,32 +52,33 @@ function updateTasks() {
   var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries);
   
   // GET MOST RECENT SUNDAY (IE TODAY) @ TIME = MIDNIGHT
-  var thisSunday = new Date(new Date(currDateTime).setHours(0,0,0,0) - mod(currDateDay,7) * MILLIS_PER_DAY);
-  var thisSundayTime = thisSunday.getTime();
+  var thisSunday = new Date(currDateTime);
+  thisSunday.setDate(currDate.getDate() - currDateDay);
+  thisSunday.setHours(0,0,0,0);
   
   // GET MOST RECENT MONDAY @ TIME = MIDNIGHT
-  var thisMonday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 1) * MILLIS_PER_DAY);
-  var thisMondayTime = thisMonday.getTime();
+  var thisMonday = new Date(thisSunday.getTime());
+  thisMonday.setDate(thisSunday.getDate() + 1);
   
   // GET MOST RECENT TUESDAY @ TIME = MIDNIGHT
-  var thisTuesday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 2) * MILLIS_PER_DAY);
-  var thisTuesdayTime = thisTuesday.getTime();
+  var thisTuesday = new Date(thisSunday.getTime());
+  thisTuesday.setDate(thisSunday.getDate() + 2);
   
   // GET MOST RECENT WEDNESDAY @ TIME = MIDNIGHT
-  var thisWednesday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 3) * MILLIS_PER_DAY);
-  var thisWednesdayTime = thisWednesday.getTime();
+  var thisWednesday = new Date(thisSunday.getTime());
+  thisWednesday.setDate(thisSunday.getDate() + 3);
   
   // GET MOST RECENT THURSDAY @ TIME = MIDNIGHT
-  var thisThursday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 4) * MILLIS_PER_DAY);
-  var thisThursdayTime = thisThursday.getTime();
+  var thisThursday = new Date(thisSunday.getTime());
+  thisThursday.setDate(thisSunday.getDate() + 4);
   
   // GET MOST RECENT FRIDAY @ TIME = MIDNIGHT
-  var thisFriday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 5) * MILLIS_PER_DAY);
-  var thisFridayTime = thisFriday.getTime();
+  var thisFriday = new Date(thisSunday.getTime());
+  thisFriday.setDate(thisSunday.getDate() + 5);
   
   // GET MOST RECENT SATURDAY @ TIME = MIDNIGHT
-  var thisSaturday = new Date(new Date(currDateTime).setHours(0,0,0,0) - (mod(currDateDay,7) - 6) * MILLIS_PER_DAY);
-  var thisSaturdayTime = thisSaturday.getTime();
+  var thisSaturday = new Date(thisSunday.getTime());
+  thisSaturday.setDate(thisSunday.getDate() + 6);
   
   // GET LIST OF TASK LISTS
   var taskLists = Tasks.Tasklists.list({maxResults:100});
@@ -225,13 +226,26 @@ function updateTasks() {
     // LOOP THROUGH lookAheadWeeks NUMBER OF WEEKS
     for (var j=0;j<=lookAheadWeeks;j++) {
       
-      var currSunday = new Date(thisSundayTime + 7*MILLIS_PER_DAY*j);
-      var currMonday = new Date(thisMondayTime + 7*MILLIS_PER_DAY*j);
-      var currTuesday = new Date(thisTuesdayTime + 7*MILLIS_PER_DAY*j);
-      var currWednesday = new Date(thisWednesdayTime + 7*MILLIS_PER_DAY*j);
-      var currThursday = new Date(thisThursdayTime + 7*MILLIS_PER_DAY*j);
-      var currFriday = new Date(thisFridayTime + 7*MILLIS_PER_DAY*j);
-      var currSaturday = new Date(thisSaturdayTime + 7*MILLIS_PER_DAY*j);
+      var currSunday = new Date(thisSunday.getTime());
+      currSunday.setDate(currSunday.getDate() + 7*j);
+      
+      var currMonday = new Date(thisMonday.getTime());
+      currMonday.setDate(currMonday.getDate() + 7*j);
+      
+      var currTuesday = new Date(thisTuesday.getTime());
+      currTuesday.setDate(currTuesday.getDate() + 7*j);
+      
+      var currWednesday = new Date(thisWednesday.getTime());
+      currWednesday.setDate(currWednesday.getDate() + 7*j);
+      
+      var currThursday = new Date(thisThursday.getTime());
+      currThursday.setDate(currThursday.getDate() + 7*j);
+      
+      var currFriday = new Date(thisFriday.getTime());
+      currFriday.setDate(currFriday.getDate() + 7*j);
+      
+      var currSaturday = new Date(thisSaturday.getTime());
+      currSaturday.setDate(currSaturday.getDate() + 7*j);
       
       var currWeek = [currSunday,currMonday,currTuesday,currWednesday,currThursday,currFriday,currSaturday];
       var inRange = [0,0,0,0,0,0,0];
@@ -278,9 +292,6 @@ function updateTasks() {
       }
     }
   }
-  
-  //Logger.log(newTasks)
-  //Logger.log(oldTasks)
 
   // FOR EVERY NEW TASK, DETERMINE IF TASK WITH SAME NAME/DATE EXISTS IN ANY LIST
   for (var i=newTasks.length-1;i>=0;i--) {
@@ -365,7 +376,7 @@ function onOffWeek(startDate,currDate,timezone) {
   // CATCH DAYLIGHT SAVINGS TIME-RELATED ISSUES
   var timezoneDifference = savingsError(startDateSunday,currDateSunday)
   
-  var weeksSince = Math.floor((currDateSunday.getTime() - startDateSunday.getTime() + timezoneDifference*MILLIS_PER_HOUR) / MILLIS_PER_WEEK);
+  var weeksSince = Math.floor((currDateSunday.getTime() - startDateSunday.getTime() + timezoneDifference * MILLIS_PER_HOUR) / MILLIS_PER_WEEK);
   
   var onWeek = mod(weeksSince,2) == 0;
   
