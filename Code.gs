@@ -37,19 +37,22 @@ function updateTasks() {
   var weeklySheet = ss.getSheetByName("Weekly Tasks");
   var biweeklySheet = ss.getSheetByName("Bi-weekly Tasks")
   var monthlySheet = ss.getSheetByName("Monthy Tasks");
+  var yearlySheet = ss.getSheetByName("Yearly Tasks")
   
   // GET SPREADSHEET DATA
   var weeklyTaskEntries = weeklySheet.getDataRange().getValues();
   var biweeklyTaskEntries = biweeklySheet.getDataRange().getValues();
   var monthlyTaskEntries = monthlySheet.getDataRange().getValues();
+  var yearlyTaskEntries = yearlySheet.getDataRange().getValues();
   
   // REMOVE HEADERS FROM SPREADSHEET DATA
   weeklyTaskEntries.splice(0,1);
   biweeklyTaskEntries.splice(0,1);
   monthlyTaskEntries.splice(0,1);
+  yearlyTaskEntries.splice(0,1);
   
   // COMBINE SPREADSHEET DATA
-  var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries);
+  var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries,yearlyTaskEntries);
   
   // GET MOST RECENT SUNDAY (IE TODAY) @ TIME = MIDNIGHT
   var thisSunday = new Date(currDateTime);
@@ -134,8 +137,10 @@ function updateTasks() {
       taskEntries[i].unshift("W");
     } else if (i<weeklyTaskEntries.length+biweeklyTaskEntries.length) {
       taskEntries[i].unshift("B");
-    } else {
+    } else if (i<weeklyTaskEntries.length+biweeklyTaskEntries.length+monthlyTaskEntries.length) {
       taskEntries[i].unshift("M");
+    } else {
+      taskEntries[i].unshift("Y");
     }
     
   }
@@ -157,6 +162,7 @@ function updateTasks() {
     var onWeek = null;
     var startWeek = null;
     var repDay = null;
+    var repMonth = null;
     var extraTag = null;
     var taskDates = null;
     
@@ -172,11 +178,17 @@ function updateTasks() {
       startWeek = fixYear(new Date(currTask.slice(11,12)));
       taskDates = currTask.slice(12,currTask.length);
       
-    } else {
+    } else if (taskType=="M") {
       
       repDay = currTask[4];
       extraTag = currTask[5];
       taskDates = currTask.slice(6,currTask.length);
+      
+    } else {
+      
+      repMonth = monthStringtoNum(currTask[4]);
+      repDay = currTask[5];
+      taskDates = currTask.slice(7,currTask.length);
       
     }
     
@@ -287,6 +299,10 @@ function updateTasks() {
         } else if (taskType=="M" && currWeek[k].getDate()==repDay && inRange[k] && extraTag.length>0) {
           
           newTasks.push ([taskTitle,taskDesc,nearestBusinessDay(currWeek[k]),taskList]);
+          
+        } else if (taskType=="Y" && currWeek[k].getMonth()==repMonth && currWeek[k].getDate()==repDay && inRange[k]) {
+          
+          newTasks.push([taskTitle,taskDesc,currWeek[k],taskList]);
           
         }
       }
@@ -410,7 +426,39 @@ function nearestBusinessDay(currDate) {
   
 }
 
-function sameDay(d1, d2) {
+function monthStringtoNum(monthString) {
+  
+  if (monthString=="January") {
+    return 0;
+  } else if (monthString=="February") {
+    return 1;
+  } else if (monthString=="March") {
+    return 2;
+  } else if (monthString=="April") {
+    return 3;
+  } else if (monthString=="May") {
+    return 4;
+  } else if (monthString=="June") {
+    return 5;
+  } else if (monthString=="July") {
+    return 6;
+  } else if (monthString=="August") {
+    return 7;
+  } else if (monthString=="September") {
+    return 8;
+  } else if (monthString=="October") {
+    return 9;
+  } else if (monthString=="November") {
+    return 10;
+  } else if (monthString=="December") {
+    return 11;
+  } else {
+    return -1;
+  }
+  
+}
+
+function sameDay(d1,d2) {
   
   // FIND IF d1 AND d2 ARE THE SAME DAY, MORE RELIABLY THAN getTime() ARITHMETIC
   var sameYear = d1.getFullYear() === d2.getFullYear();
