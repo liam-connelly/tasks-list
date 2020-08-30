@@ -37,22 +37,25 @@ function updateTasks() {
   var weeklySheet = ss.getSheetByName("Weekly Tasks");
   var biweeklySheet = ss.getSheetByName("Bi-weekly Tasks")
   var monthlySheet = ss.getSheetByName("Monthy Tasks");
-  var yearlySheet = ss.getSheetByName("Yearly Tasks")
+  var yearlySheet = ss.getSheetByName("Yearly Tasks");
+  var nthDayWeekMonthSheet = ss.getSheetByName("Nth Day of Week of Month");
   
   // GET SPREADSHEET DATA
   var weeklyTaskEntries = weeklySheet.getDataRange().getValues();
   var biweeklyTaskEntries = biweeklySheet.getDataRange().getValues();
   var monthlyTaskEntries = monthlySheet.getDataRange().getValues();
   var yearlyTaskEntries = yearlySheet.getDataRange().getValues();
+  var nthDayWeekMonthEntries = nthDayWeekMonthSheet.getDataRange().getValues();
   
   // REMOVE HEADERS FROM SPREADSHEET DATA
   weeklyTaskEntries.splice(0,1);
   biweeklyTaskEntries.splice(0,1);
   monthlyTaskEntries.splice(0,1);
   yearlyTaskEntries.splice(0,1);
+  nthDayWeekMonthEntries.splice(0,1);
   
   // COMBINE SPREADSHEET DATA
-  var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries,yearlyTaskEntries);
+  var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries,yearlyTaskEntries,nthDayWeekMonthEntries);
   
   // GET MOST RECENT SUNDAY (IE TODAY) @ TIME = MIDNIGHT
   var thisSunday = new Date(currDateTime);
@@ -139,8 +142,10 @@ function updateTasks() {
       taskEntries[i].unshift("B");
     } else if (i<weeklyTaskEntries.length+biweeklyTaskEntries.length+monthlyTaskEntries.length) {
       taskEntries[i].unshift("M");
-    } else {
+    } else if (i<weeklyTaskEntries.length+biweeklyTaskEntries.length+monthlyTaskEntries.length+yearlyTaskEntries.length) {
       taskEntries[i].unshift("Y");
+    } else {
+      taskEntries[i].unshift("N");
     }
     
   }
@@ -158,15 +163,10 @@ function updateTasks() {
     var taskDesc = currTask[2];
     var taskTargetList = currTask[3];
     
-    var repMap = null;
-    var onWeek = null;
-    var startWeek = null;
-    var repDay = null;
-    var repMonth = null;
-    var extraTag = null;
-    var taskDates = null;
+    var repMap, onWeek, startWeek, repDay, repMonth, extraTag, taskDates;
+    var repWeekDayInstance, repWeekDay, afterFirstWeekDay;
     
-    // GET DAYS ON WHICH TASK REPEATS
+    // FOR EACH TASK TYPE, COLLECT APPROPRIATE INFORMATION
     if (taskType=="W") {
       
       repMap = currTask.slice(4,11);
@@ -184,11 +184,19 @@ function updateTasks() {
       extraTag = currTask[5];
       taskDates = currTask.slice(6,currTask.length);
       
-    } else {
+    } else if (taskType=="Y") {
       
-      repMonth = monthStringtoNum(currTask[4]);
+      repMonth = monthStringToNum(currTask[4]);
       repDay = currTask[5];
-      taskDates = currTask.slice(7,currTask.length);
+      taskDates = currTask.slice(6,currTask.length);
+      
+    } else if (taskType=="N") {
+      
+      repWeekDayInstance = currTask[4];
+      repWeekDay = dayStringToNum(currTask[5]);
+      repMonth = monthStringToNum(currTask[6]);
+      afterFirstWeekDay = dayStringToNum(currTask[7]);
+      taskDates = currTask.slice(8,currTask.length);
       
     }
     
@@ -227,6 +235,7 @@ function updateTasks() {
       if (taskLists.items[j].title == taskTargetList) {
       
         var taskList = taskLists.items[j];
+        
         break;
       
       }
@@ -277,18 +286,12 @@ function updateTasks() {
           
         }
         
-        if (taskType=="B") {
-          
-          onWeek = onOffWeek(startWeek,currSunday,timezone);
-          
-        }
-        
         // IF TO BE REPEATED THIS DAY AND IN RANGE, ADD TO NEW LIST
         if (taskType=="W" && repMap[k] && inRange[k]) {
           
           newTasks.push([taskTitle,taskDesc,currWeek[k],taskList]);
           
-        } else if (taskType=="B" && onWeek && repMap[k] && inRange[k]) {
+        } else if (taskType=="B" && onOffWeek(startWeek,currSunday,timezone) && repMap[k] && inRange[k]) {
           
           newTasks.push([taskTitle,taskDesc,currWeek[k],taskList]);
           
@@ -303,6 +306,11 @@ function updateTasks() {
         } else if (taskType=="Y" && currWeek[k].getMonth()==repMonth && currWeek[k].getDate()==repDay && inRange[k]) {
           
           newTasks.push([taskTitle,taskDesc,currWeek[k],taskList]);
+          
+        } else if (taskType=="N" && (currWeek[k].getMonth()==repMonth || repMonth==12) && currWeek[k].getDay()==repWeekDay
+        && getNumOfWeekDay(currWeek[k], afterFirstWeekDay)==repWeekDayInstance && inRange[k]) {
+          
+          newTasks.push([taskTitle,taskDesc,currWeek[k],taskList])
           
         }
       }
@@ -322,8 +330,6 @@ function updateTasks() {
     }
   }
   
-  Logger.log(newTasks)
-  
   // FOR EVERY TASK STILL IN NEW LIST, PARSE AND ADD TO GOOGLE TASKS
   for (var i=0;i<newTasks.length;i++) {
     
@@ -341,6 +347,7 @@ function updateTasks() {
   }
 }
 
+// CHECK IF entryDate IS BETWEEN beginPeriod AND endPeriod, INCLUSIVE
 function dateInRange(entryDate,beginPeriod,endPeriod) {
   
   var entryDateTime = entryDate.getTime();
@@ -351,24 +358,18 @@ function dateInRange(entryDate,beginPeriod,endPeriod) {
   
 }
 
-function mod(n, p) {
-  
-    return n - p * Math.floor(n/p);
-  
-}
-
+// IF DATE IS ROUNDED DOWN TO 1900s, CORRECT BY ADDING 100 YEARS
 function fixYear(date) {
   
-  // IF DATE IS ROUNDED DOWN TO 1900s, CORRECT BY ADDING 100 YEARS
   if (date.getFullYear()<1970) date.setFullYear(date.getFullYear() + 100);
   
   return date;
   
 }
 
+// PARSE ISO STRING TO DATE STRING "MM/DD/YYYY" FOR EASE OF USE
 function fixDate(ISOString) {
   
-  // PARSE ISO STRING TO DATE STRING "MM/DD/YYYY" FOR EASE OF USE
   var indexFirst = ISOString.indexOf('-');
   var indexSecond = ISOString.indexOf('-',indexFirst+1);
   var indexThird = ISOString.indexOf('T',indexSecond+1);
@@ -383,42 +384,47 @@ function fixDate(ISOString) {
 
 }
 
-function onOffWeek(startDate,currDate,timezone) {
+// DETERMINE IF ON WEEK OR OFF WEEK (EVEN OR ODD # OF WEEKS SINCE START WEEK)
+function onOffWeek(startDate,currDate) {
   
-  // DETERMINE IF ON WEEK OR OFF WEEK (EVEN OR ODD # OF WEEKS SINCE START WEEK)
-  var startDateSunday = new Date(new Date(startDate).setHours(0,0,0,0) - mod(startDate.getDay(),7) * MILLIS_PER_DAY);
-  var currDateSunday = new Date(new Date(currDate).setHours(0,0,0,0) - mod(currDate.getDay(),7) * MILLIS_PER_DAY);
+  var currDate = new Date(currDate.getTime());
   
-  // CATCH DAYLIGHT SAVINGS TIME-RELATED ISSUES
-  var timezoneDifference = savingsError(startDateSunday,currDateSunday)
+  var startDateSunday = new Date(startDate.getTime());
+  startDateSunday.setHours(0,0,0,0);
+  startDateSunday.setDate(startDate.getDate()-mod(startDate.getDay(),7));
   
-  var weeksSince = Math.floor((currDateSunday.getTime() - startDateSunday.getTime() + timezoneDifference * MILLIS_PER_HOUR) / MILLIS_PER_WEEK);
+  var currDateSunday = new Date(currDate.getTime());
+  currDateSunday.setHours(0,0,0,0);
+  currDateSunday.setDate(currDate.getDate()-mod(currDate.getDay(),7));
   
-  var onWeek = mod(weeksSince,2) == 0;
+  if (startDateSunday.getTime()>currDateSunday.getTime()) return -1;
   
-  return onWeek;
+  var weeksSince = 0;
+  
+  while (!sameDay(currDateSunday,startDateSunday)) {
+    
+    weeksSince+=1;
+    
+    currDateSunday.setDate(currDateSunday.getDate()-7);
+    
+  }
+  
+  return mod(weeksSince,2)==0;
   
 }
 
+// IF SATURDAY OR SUNDAY, FIND PREVIOUS FRIDAY
 function nearestBusinessDay(currDate) {
   
-  // IF SATURDAY OR SUNDAY, FIND PREVIOUS FRIDAY
   var currDateTime = currDate.getTime();
   var currDateDay = currDate.getDay();
   
-  var businessDate = null;
+  var businessDate;
   
-  if (currDateDay==0) {
+  if (currDateDay==0 || currDateDay==6) {
     
-    businessDate = new Date(new Date(currDateTime).setHours(0,0,0,0) - 2 * MILLIS_PER_DAY);
-    
-  } else if (currDateDay==6) {
-    
-    businessDate = new Date(new Date(currDateTime).setHours(0,0,0,0) - 1 * MILLIS_PER_DAY);
-    
-  } else {
-    
-    businessDate = currDate;
+    businessDate = new Date(currDate.getTime());
+    businessDate.setDate(currDate.getDate()-mod(currDate.getDay()+2,7));
     
   }
   
@@ -426,7 +432,8 @@ function nearestBusinessDay(currDate) {
   
 }
 
-function monthStringtoNum(monthString) {
+// CONVERT NAME OF MONTH TO VALUE BETWEEN 0 & 11, OTHERWISE 12 IF 'ALL', OTHERWISE -1
+function monthStringToNum(monthString) {
   
   if (monthString=="January") {
     return 0;
@@ -452,15 +459,82 @@ function monthStringtoNum(monthString) {
     return 10;
   } else if (monthString=="December") {
     return 11;
+  } else if (monthString=="All") {
+    return 12;
   } else {
     return -1;
   }
   
 }
 
+// CONVERT NAME OF DAY TO VALUE BETWEEN 0 & 6, OTHERWISE -1
+function dayStringToNum(dayString) {
+  
+  if (dayString=="Sunday") {
+    return 0;
+  } else if (dayString=="Monday") {
+    return 1;
+  } else if (dayString=="Tuesday") {
+    return 2;
+  } else if (dayString=="Wednesday") {
+    return 3;
+  } else if (dayString=="Thursday") {
+    return 4;
+  } else if (dayString=="Friday") {
+    return 5;
+  } else if (dayString=="Saturday") {
+    return 6;
+  } else {
+    return -1;
+  }
+  
+}
+
+// FIND WEEK DAY NUMBER OF DAY IN MONTH, ADJUSTING FOR DECLARED OFFSET
+function getNumOfWeekDay(currDate,afterFirstWeekDay) {
+  
+  var currDateDate = currDate.getDate();
+  
+  var firstDateOfWeekDay = getFirstDateOfWeekDay(currDate,afterFirstWeekDay)+1;
+  
+  var adjustedCurrDateDate = currDateDate-firstDateOfWeekDay;
+  
+  if (currDateDate-firstDateOfWeekDay <= 7) {
+    return 1;
+  } else if (currDateDate-firstDateOfWeekDay <= 14) {
+    return 2;
+  } else if (currDateDate-firstDateOfWeekDay <= 21) {
+    return 3;
+  } else if (currDateDate-firstDateOfWeekDay <= 28) {
+    return 4;
+  } else if (currDateDate-firstDateOfWeekDay <= 31) {
+    return 5;
+  } else {
+    return -1;
+  }
+  
+}
+
+// FIND DATE OF FIRST OCCURENCE OF WEEK DAY IN MONTH
+function getFirstDateOfWeekDay(currDate,weekDay) {
+  
+  if (weekDay==-1) return -1;
+  
+   currDate = new Date(currDate.getTime())
+   currDate.setDate(1);
+  
+  while (currDate.getDay()!=weekDay) {
+    currDate.setDate(currDate.getDate()+1);
+  }
+  
+  return currDate.getDate();
+  
+}
+
+// FIND IF d1 AND d2 ARE THE SAME DAY
 function sameDay(d1,d2) {
   
-  // FIND IF d1 AND d2 ARE THE SAME DAY, MORE RELIABLY THAN getTime() ARITHMETIC
+  // MORE RELIABLE THAN getTime() ARITHMETIC
   var sameYear = d1.getFullYear() === d2.getFullYear();
   var sameMonth = d1.getMonth() === d2.getMonth();
   var sameDate = d1.getDate() === d2.getDate();
@@ -469,6 +543,7 @@ function sameDay(d1,d2) {
   
 }
 
+// ADJUST FOR DAYLIGHT SAVINGS ERROR -- NEEDS REVISION
 function savingsError(beginDate,endDate) {
   
   var beginDate = beginDate.getTimezoneOffset();
@@ -477,5 +552,12 @@ function savingsError(beginDate,endDate) {
   var timezoneDifference = (beginDate - endDate) / 60;
   
   return timezoneDifference
+  
+}
+
+// MOD p OF n
+function mod(n, p) {
+  
+    return n - p * Math.floor(n/p);
   
 }
