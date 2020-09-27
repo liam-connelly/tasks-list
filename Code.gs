@@ -419,11 +419,10 @@ function nearestBusinessDay(currDate) {
   var currDateTime = currDate.getTime();
   var currDateDay = currDate.getDay();
   
-  var businessDate;
+  var businessDate = new Date(currDate.getTime());
   
   if (currDateDay==0 || currDateDay==6) {
     
-    businessDate = new Date(currDate.getTime());
     businessDate.setDate(currDate.getDate()-mod(currDate.getDay()+2,7));
     
   }
