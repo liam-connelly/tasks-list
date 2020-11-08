@@ -498,13 +498,13 @@ function getNumOfWeekDay(currDate,afterFirstWeekDay) {
   
   var adjustedCurrDateDate = currDateDate-firstDateOfWeekDay;
   
-  if (currDateDate-firstDateOfWeekDay <= 7) {
+  if (currDateDate-firstDateOfWeekDay < 7) {
     return 1;
-  } else if (currDateDate-firstDateOfWeekDay <= 14) {
+  } else if (currDateDate-firstDateOfWeekDay < 14) {
     return 2;
-  } else if (currDateDate-firstDateOfWeekDay <= 21) {
+  } else if (currDateDate-firstDateOfWeekDay < 21) {
     return 3;
-  } else if (currDateDate-firstDateOfWeekDay <= 28) {
+  } else if (currDateDate-firstDateOfWeekDay < 28) {
     return 4;
   } else if (currDateDate-firstDateOfWeekDay <= 31) {
     return 5;
