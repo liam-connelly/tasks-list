@@ -1,3 +1,4 @@
+// @ts-nocheck
 // NUMERIC CONSTANTS
 var MILLIS_PER_MINUTE = 60 * 1000;
 var MILLIS_PER_HOUR = 60 * MILLIS_PER_MINUTE;
@@ -39,6 +40,7 @@ function updateTasks() {
   var monthlySheet = ss.getSheetByName("Monthy Tasks");
   var yearlySheet = ss.getSheetByName("Yearly Tasks");
   var nthDayWeekMonthSheet = ss.getSheetByName("Nth Day of Week of Month");
+  var rescheduledTasksSheet = ss.getSheetByName("Rescheduled Tasks");
   
   // GET SPREADSHEET DATA
   var weeklyTaskEntries = weeklySheet.getDataRange().getValues();
@@ -46,6 +48,7 @@ function updateTasks() {
   var monthlyTaskEntries = monthlySheet.getDataRange().getValues();
   var yearlyTaskEntries = yearlySheet.getDataRange().getValues();
   var nthDayWeekMonthEntries = nthDayWeekMonthSheet.getDataRange().getValues();
+  var rescheduledTasksEntries = rescheduledTasksSheet.getDataRange().getValues();
   
   // REMOVE HEADERS FROM SPREADSHEET DATA
   weeklyTaskEntries.splice(0,1);
@@ -53,6 +56,7 @@ function updateTasks() {
   monthlyTaskEntries.splice(0,1);
   yearlyTaskEntries.splice(0,1);
   nthDayWeekMonthEntries.splice(0,1);
+  rescheduledTasksEntries.splice(0,1);
   
   // COMBINE SPREADSHEET DATA
   var taskEntries = weeklyTaskEntries.concat(biweeklyTaskEntries,monthlyTaskEntries,yearlyTaskEntries,nthDayWeekMonthEntries);
@@ -147,7 +151,6 @@ function updateTasks() {
     } else {
       taskEntries[i].unshift("N");
     }
-    
   }
   
   // TASKS THAT MAY NEED TO BE ADDED
@@ -317,6 +320,53 @@ function updateTasks() {
     }
   }
 
+  // LOOK THROUGH RESCHEDULED TASKS
+  for (var i=rescheduledTasksEntries.length-1;i>=0;i--) {
+
+    var currRescheduledTitle = rescheduledTasksEntries[i][0];
+    var currRescheduledList = rescheduledTasksEntries[i][2];
+    var currOldRescheduledDate = rescheduledTasksEntries[i][3];
+    var currNewRescheduledDateString = rescheduledTasksEntries[i][4];
+
+    var currNewRescheduledDate;
+
+    if (currNewRescheduledDateString.length && !(currNewRescheduledDateString instanceof Date))  {
+
+      currNewRescheduledDate = new Date(currNewRescheduledDateString);
+
+      if (isNaN(currNewRescheduledDate.getTime())){
+        currNewRescheduledDate = [];
+      }
+
+    } else if (currNewRescheduledDateString instanceof Date) {
+
+      currNewRescheduledDate = currNewRescheduledDateString;
+
+    } else {
+
+      currNewRescheduledDate = [];
+
+    }
+
+    // FOR EVERY RESCHEDULED TASK, DETERMINE IF NEW TASK WITH SAME NAME/DATE/LIST EXISTS
+    for (var j=newTasks.length-1;j>=0;j--) {
+
+      // DETERMINE IF TASK IS RESCHEDULED OR CANCELED, AND AMEND NEW TASK ACCORDINGLY
+      if (sameDay(currOldRescheduledDate,newTasks[j][2]) && currRescheduledTitle == newTasks[j][0] && currRescheduledList == newTasks[j][3].title) {
+
+        if (currNewRescheduledDate instanceof Date) {
+
+          newTasks[j][2] = currNewRescheduledDate;
+
+        } else {
+
+          newTasks.splice(j,1);
+
+        }
+      }
+    }
+  }
+
   // FOR EVERY NEW TASK, DETERMINE IF TASK WITH SAME NAME/DATE EXISTS IN ANY LIST
   for (var i=newTasks.length-1;i>=0;i--) {
     
@@ -346,6 +396,24 @@ function updateTasks() {
     
   }
 }
+
+// CREATE AND REBUILD SPREADSHEETS
+function rebuildSpreadsheet() {
+  
+  // GET SPREADSHEET CELL REFERENCES
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var weeklySheet = ss.getSheetByName("Weekly Tasks");
+  var biweeklySheet = ss.getSheetByName("Bi-weekly Tasks")
+  var monthlySheet = ss.getSheetByName("Monthy Tasks");
+  var yearlySheet = ss.getSheetByName("Yearly Tasks");
+  var nthDayWeekMonthSheet = ss.getSheetByName("Nth Day of Week of Month");
+  
+  
+  
+  
+}
+  
+  
 
 // CHECK IF entryDate IS BETWEEN beginPeriod AND endPeriod, INCLUSIVE
 function dateInRange(entryDate,beginPeriod,endPeriod) {
